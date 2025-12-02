@@ -259,10 +259,18 @@ class VesselResponseList(dict[str, VesselResponses]):
         df_all = self.all_results_to_df()
         df_critical = self.critical_lcs_df(df_all, waveDirs)
 
+        mapper = {}
+        for name in df_critical.index.get_level_values(0):
+            mapper[name] = name.split()[0]
+
+        df_critical = df_critical.rename(mapper=mapper)
+
         # write to excel
         with pd.ExcelWriter(path, mode='w') as writer:
             df_critical.to_excel(writer, sheet_name='Critical LCs')
             df_all.to_excel(writer, sheet_name='All results')
+
+        return df_critical, df_all
 
     def critical_lcs_df(self, all_df: pd.DataFrame, waveDirs: list[str]) -> pd.DataFrame:
         """
@@ -382,7 +390,7 @@ class VesselResponseList(dict[str, VesselResponses]):
         if waveTrainIndex is not None:
             model.environment.SelectedWaveIndex = waveTrainIndex
 
-        from src.NsgOrcFx.auxfuncs import isRegularWave
+        from .auxfuncs import isRegularWave
         if isRegularWave(model.environment.WaveType):
             raise Exception('This script is only for irregular waves (e.g., JONSWAP).')
 
@@ -399,7 +407,6 @@ class VesselResponseList(dict[str, VesselResponses]):
         vessel.ResponseOutputPointz[0] = position[2]
         # print('Storm duration = ' + str(vessel.ResponseStormDuration))
         vessel.ResponseStormDuration = stormDuration
-
 
         vesselType = model[vessel.VesselType]
         draughts = list(vesselType.DraughtName).copy()
@@ -444,5 +451,7 @@ class VesselResponseList(dict[str, VesselResponses]):
 
         # export results to excel
         print(f'Exporting results to Excel file: "{outFile}" ...', end='', flush=True)
-        self.to_excel(outFile, waveDirsHsTp.keys())
+        df_critical, df_all = self.to_excel(outFile, waveDirsHsTp.keys())
         print(' done.')
+
+        return df_critical, df_all

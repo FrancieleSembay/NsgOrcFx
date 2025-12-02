@@ -314,7 +314,7 @@ class Model(orc.Model):
         """
         from .vessel import VesselResponseList
         response = VesselResponseList()
-        response.ProcessExtremeResponses(
+        df_critical, df_all = response.ProcessExtremeResponses(
             model=self,
             vesselName=vesselName,
             position=position,
@@ -325,6 +325,8 @@ class Model(orc.Model):
             northDir=northDir,
             waveTrainIndex=waveTrainIndex
         )
+
+        return df_critical, df_all
 
 
 class LineSelection(list[OrcaFlexLineObject]):

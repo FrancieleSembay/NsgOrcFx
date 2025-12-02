@@ -159,6 +159,8 @@ def __saveToFile(
         df2.to_excel(file.replace('.csv','_LC-list.csv'), sheet_name='LC list')
     else:
         raise Exception(f'Extension "{ext}" not supported.')
+    
+    return df1, df2
 
 
     print('done.')
@@ -282,7 +284,6 @@ def __getConstraintList(model: ofx.Model, constraints: list[str]) -> list[str]:
             
 def __procFiles(
         files: list[str], 
-        simFilesFolder: str, 
         constraints: list[str],
         latestWave: bool = True,
         includeStatics: bool = True,
@@ -294,10 +295,9 @@ def __procFiles(
     n = len(files)
     for i, f in enumerate(files):
         print(f'Processing file ({i+1}/{n}): "{f}" ...', end=' ', flush=True)
-        LC = f # the Load Case title is assumed to be the file name
+        LC = f.split('\\')[-1] # the Load Case title is assumed to be the file name
 
-        path = os.path.join(simFilesFolder, f)
-        model = ofx.Model(path)
+        model = ofx.Model(f)
         if len(constraints) == 0 and i == 0:
             __getConstraintList(model, constraints)
 
@@ -410,7 +410,7 @@ def __getConstraintExtremes(
 
 
 def ExtremeLoadsFromConstraints(
-        sim_files_folder: str, 
+        files: list, 
         out_file: str, 
         constraints: None|list[str] = None, 
         latest_wave: bool=True,
@@ -439,9 +439,8 @@ def ExtremeLoadsFromConstraints(
 
     Obs.: Assumes all .sim files have the same Constraint objects and unit definitions 
     """
-    files = __getFileList(sim_files_folder)
 
-    units = _Units(os.path.join(sim_files_folder,files[0]))
+    units = _Units(files[0])
 
     global resultDefinitions
     resultDefinitions = ResultDefinitions(units, in_frame, local)
@@ -449,7 +448,9 @@ def ExtremeLoadsFromConstraints(
     if constraints == None: constraints = []
 
     extremeByObj, completeRstList = __procFiles(
-        files, sim_files_folder, constraints, latest_wave, 
+        files, constraints, latest_wave, 
         include_statics, invert_signs)
     
-    __saveToFile(extremeByObj, completeRstList, out_file, constraints, units, include_statics)
+    df1, df2 = __saveToFile(extremeByObj, completeRstList, out_file, constraints, units, include_statics)
+
+    return df1, df2
